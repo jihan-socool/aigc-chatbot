@@ -82,7 +82,7 @@ export function SidebarUserNav({ user }: { user: User }) {
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">
               <button
                 className="w-full cursor-pointer"
-                onClick={() => {
+                onClick={async () => {
                   if (status === "loading") {
                     toast({
                       type: "error",
@@ -93,9 +93,13 @@ export function SidebarUserNav({ user }: { user: User }) {
                     return;
                   }
 
-                  signOut({
-                    callbackUrl: "/login",
+                  // 使用 redirect: false 避免硬编码的URL跳转
+                  await signOut({
+                    redirect: false,
                   });
+                  
+                  // 使用客户端路由跳转，保持相对路径
+                  router.push("/login");
                 }}
                 type="button"
               >
