@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  aigc-chatbot:
+    image: ccr.ccs.tencentyun.com/YOUR_NAMESPACE/aigc-chatbot:latest
+    container_name: aigc-chatbot
+    restart: on-failure
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - .env.production
+    volumes:
+      - aigc-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - aigc-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: PostgreSQL for local database
+  postgres:
+    image: postgres:15-alpine
+    container_name: aigc-postgres
+    restart: on-failure
+    environment:
+      POSTGRES_DB: aigc_chatbot
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - aigc-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Redis for resumable streaming
+  redis:
+    image: redis:7-alpine
+    container_name: aigc-redis
+    restart: on-failure
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - aigc-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  aigc-data:
+  postgres-data:
+  redis-data:
+
+networks:
+  aigc-network:
+    driver: bridge

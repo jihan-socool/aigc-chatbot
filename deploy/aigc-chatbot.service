@@ -1,0 +1,42 @@
+[Unit]
+Description=AIGC Chatbot Docker Compose Service
+Documentation=file:///opt/aigc-chatbot/docs/deployment/tencent-cvm.md
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/aigc-chatbot
+EnvironmentFile=/opt/aigc-chatbot/.env.production
+EnvironmentFile=-/opt/aigc-chatbot/.env.production.local
+
+# Start the docker-compose stack
+ExecStart=/bin/bash -c '/opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh'
+
+# Stop the docker-compose stack
+ExecStop=/usr/bin/docker-compose --file=/opt/aigc-chatbot/docker-compose.yml down
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=60s
+StartLimitBurst=5
+
+# Process management
+KillMode=mixed
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+# Security and isolation
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aigc-chatbot
+
+[Install]
+WantedBy=multi-user.target
