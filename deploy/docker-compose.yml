@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  app:
+    image: "${CCR_REGISTRY:-ccr.ccs.tencentyun.com/your-namespace}/${CCR_REPOSITORY:-ai-chatbot}:${CCR_TAG:-latest}"
+    build:
+      context: ..
+      dockerfile: ../Dockerfile
+      target: runner
+      args:
+        NODE_IMAGE: "${NODE_IMAGE:-node:20-bookworm-slim}"
+        PNPM_VERSION: "${PNPM_VERSION:-9.12.3}"
+    env_file:
+      - ../.env.example
+    environment:
+      AUTH_SECRET: "${AUTH_SECRET:-insecure-development-secret}"
+      AI_GATEWAY_API_KEY: "${AI_GATEWAY_API_KEY:-demo-api-key}"
+      BLOB_READ_WRITE_TOKEN: "${BLOB_READ_WRITE_TOKEN:-demo-blob-token}"
+      POSTGRES_URL: "${POSTGRES_URL:-postgres://postgres:postgres@postgres:5432/postgres}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_ENV: "production"
+      PORT: "${PORT:-3000}"
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - type: bind
+        source: ../.env.example
+        target: /app/.env
+        read_only: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          node -e "const http=require('node:http');const req=http.request({host:'127.0.0.1',port:process.env.PORT||3000,path:'/api/health'});req.on('response',res=>{res.resume();if(res.statusCode&&res.statusCode<400){process.exit(0);}process.exit(1);});req.on('error',()=>process.exit(1));req.setTimeout(4000,()=>{req.destroy();process.exit(1);});req.end();"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    restart: unless-stopped
+
+  postgres:
+    image: "postgres:16-alpine"
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+      POSTGRES_DB: "${POSTGRES_DB:-postgres}"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -d "${POSTGRES_DB:-postgres}" -U "${POSTGRES_USER:-postgres}"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: "redis:7-alpine"
+    command:
+      - redis-server
+      - "--save"
+      - "60"
+      - "1"
+      - "--loglevel"
+      - warning
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
