@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Chat } from "@/components/chat";
@@ -21,15 +22,17 @@ export default async function Page() {
   if (!modelIdFromCookie) {
     return (
       <>
-        <Chat
-          autoResume={false}
-          id={id}
-          initialChatModel={DEFAULT_CHAT_MODEL}
-          initialMessages={[]}
-          initialVisibilityType="private"
-          isReadonly={false}
-          key={id}
-        />
+        <Suspense>
+          <Chat
+            autoResume={false}
+            id={id}
+            initialChatModel={DEFAULT_CHAT_MODEL}
+            initialMessages={[]}
+            initialVisibilityType="private"
+            isReadonly={false}
+            key={id}
+          />
+        </Suspense>
         <DataStreamHandler />
       </>
     );
@@ -37,15 +40,17 @@ export default async function Page() {
 
   return (
     <>
-      <Chat
-        autoResume={false}
-        id={id}
-        initialChatModel={modelIdFromCookie.value}
-        initialMessages={[]}
-        initialVisibilityType="private"
-        isReadonly={false}
-        key={id}
-      />
+      <Suspense>
+        <Chat
+          autoResume={false}
+          id={id}
+          initialChatModel={modelIdFromCookie.value}
+          initialMessages={[]}
+          initialVisibilityType="private"
+          isReadonly={false}
+          key={id}
+        />
+      </Suspense>
       <DataStreamHandler />
     </>
   );

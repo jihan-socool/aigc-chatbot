@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
@@ -45,15 +46,17 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!chatModelFromCookie) {
     return (
       <>
-        <Chat
-          autoResume={true}
-          id={chat.id}
-          initialChatModel={DEFAULT_CHAT_MODEL}
-          initialLastContext={chat.lastContext ?? undefined}
-          initialMessages={uiMessages}
-          initialVisibilityType={chat.visibility}
-          isReadonly={session?.user?.id !== chat.userId}
-        />
+        <Suspense>
+          <Chat
+            autoResume={true}
+            id={chat.id}
+            initialChatModel={DEFAULT_CHAT_MODEL}
+            initialLastContext={chat.lastContext ?? undefined}
+            initialMessages={uiMessages}
+            initialVisibilityType={chat.visibility}
+            isReadonly={session?.user?.id !== chat.userId}
+          />
+        </Suspense>
         <DataStreamHandler />
       </>
     );
@@ -61,15 +64,17 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <Chat
-        autoResume={true}
-        id={chat.id}
-        initialChatModel={chatModelFromCookie.value}
-        initialLastContext={chat.lastContext ?? undefined}
-        initialMessages={uiMessages}
-        initialVisibilityType={chat.visibility}
-        isReadonly={session?.user?.id !== chat.userId}
-      />
+      <Suspense>
+        <Chat
+          autoResume={true}
+          id={chat.id}
+          initialChatModel={chatModelFromCookie.value}
+          initialLastContext={chat.lastContext ?? undefined}
+          initialMessages={uiMessages}
+          initialVisibilityType={chat.visibility}
+          isReadonly={session?.user?.id !== chat.userId}
+        />
+      </Suspense>
       <DataStreamHandler />
     </>
   );
