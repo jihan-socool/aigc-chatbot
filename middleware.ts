@@ -17,10 +17,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Determine if we should use secure cookies based on the actual protocol
+  // In production behind a reverse proxy, check x-forwarded-proto header
+  const proto = request.headers.get("x-forwarded-proto");
+  const isHttps = proto ? proto === "https" : request.nextUrl.protocol === "https:";
+  
+  // Use secure cookies only when:
+  // 1. Not in development mode AND
+  // 2. The connection is actually over HTTPS (either direct or via proxy)
+  const useSecureCookie = !isDevelopmentEnvironment && isHttps;
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
+    secureCookie: useSecureCookie,
   });
 
   if (!token) {

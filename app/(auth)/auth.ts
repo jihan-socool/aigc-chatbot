@@ -49,6 +49,7 @@ export const {
         const rawUsername = credentials?.username;
 
         if (!rawUsername || typeof rawUsername !== "string") {
+          console.error("[Auth] Invalid credentials: username is required");
           return null;
         }
 
@@ -61,7 +62,8 @@ export const {
             username: userRecord.username,
             type: "regular" as const,
           };
-        } catch (_error) {
+        } catch (error) {
+          console.error("[Auth] Failed to ensure user by username:", error);
           return null;
         }
       },
