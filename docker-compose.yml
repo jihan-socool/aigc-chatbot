@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   app:
-    image: ${CCR_REGISTRY}/${CCR_NAMESPACE}/${CCR_REPOSITORY}:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: ai-chatbot
     restart: unless-stopped
     ports:
