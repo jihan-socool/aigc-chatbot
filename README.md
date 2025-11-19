@@ -38,6 +38,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS "User_username_unique" ON "User" ("username");
 在项目根目录创建 `.env.local`，至少配置以下项目：
 
 ```bash
+# NextAuth 认证配置（必需）
+AUTH_SECRET=your-random-secret-key-32-characters-or-more
+NEXTAUTH_SECRET=your-random-secret-key-32-characters-or-more
+NEXTAUTH_URL=http://localhost:3000  # 本地开发
+
+# OpenAI 配置
 OPENAI_API_KEY=你的API密钥
 OPENAI_API_URL=https://你的网关域名/v1
 OPENAI_CHAT_MODEL=自定义主模型ID
@@ -47,6 +53,17 @@ OPENAI_ARTIFACT_MODEL=自定义文档模型ID
 NEXT_PUBLIC_OPENAI_CHAT_MODEL_DISPLAY_NAME=主模型显示名称
 NEXT_PUBLIC_OPENAI_REASONING_MODEL_DISPLAY_NAME=推理模型显示名称
 ```
+
+### NextAuth 重要说明
+
+- **本地开发**：`NEXTAUTH_URL=http://localhost:3000`
+- **生产域名部署**：`NEXTAUTH_URL=https://your-domain.com`
+- **生产 IP 部署**：`NEXTAUTH_URL=http://your-server-ip:3000`
+
+如果遇到 "UntrustedHost" 错误，请确保：
+1. `NEXTAUTH_URL` 与实际访问的 URL 完全匹配（协议、域名/IP、端口）
+2. 生产环境中已配置 `trustHost: true`（已在本项目中配置）
+3. 使用了正确的 `AUTH_SECRET` 和 `NEXTAUTH_SECRET`
 
 > 提示：`OPENAI_API_URL` 会自动补齐 `/v1`，填写时可带或不带，全局都会指向 `/v1/chat/completions`。
 

@@ -109,10 +109,7 @@ export function Chat({
     onError: (error) => {
       if (error instanceof ChatSDKError) {
         // Check if it's an API key error
-        if (
-          error.message?.includes("API key") ||
-          error.surface === "api_key"
-        ) {
+        if (error.message?.includes("API key") || error.surface === "api_key") {
           setShowApiKeyAlert(true);
         } else {
           toast({
@@ -222,26 +219,21 @@ export function Chat({
         votes={votes}
       />
 
-      <AlertDialog
-        onOpenChange={setShowApiKeyAlert}
-        open={showApiKeyAlert}
-      >
+      <AlertDialog onOpenChange={setShowApiKeyAlert} open={showApiKeyAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>API Key Required</AlertDialogTitle>
             <AlertDialogDescription>
-              This application requires a valid OpenAI API key to function. Please
-              set the OPENAI_API_KEY environment variable in your configuration.
+              This application requires a valid OpenAI API key to function.
+              Please set the OPENAI_API_KEY environment variable in your
+              configuration.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                window.open(
-                  "https://platform.openai.com/api-keys",
-                  "_blank"
-                );
+                window.open("https://platform.openai.com/api-keys", "_blank");
                 setShowApiKeyAlert(false);
               }}
             >

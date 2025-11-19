@@ -76,4 +76,3 @@ export function TypewriterText({
 
   return <>{displayText}</>;
 }
-

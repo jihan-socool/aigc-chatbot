@@ -6,9 +6,9 @@ import { useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
 import { SubmitButton } from "@/components/submit-button";
+import { toast } from "@/components/toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/toast";
 import { type LoginActionState, login } from "../actions";
 
 export function LoginForm() {
@@ -50,7 +50,7 @@ export function LoginForm() {
       router.replace(redirectUrl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status]);
+  }, [state.status, redirectUrl, router.replace, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
     setUsername((formData.get("username") as string) ?? "");
@@ -66,7 +66,10 @@ export function LoginForm() {
             请输入一个用户名开始聊天。
           </p>
         </div>
-        <Form action={handleSubmit} className="flex flex-col gap-4 px-4 sm:px-16">
+        <Form
+          action={handleSubmit}
+          className="flex flex-col gap-4 px-4 sm:px-16"
+        >
           <div className="flex flex-col gap-2">
             <Label
               className="font-normal text-zinc-600 dark:text-zinc-400"

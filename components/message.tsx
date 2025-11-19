@@ -19,13 +19,13 @@ import {
   ToolOutput,
 } from "./elements/tool";
 import { SparklesIcon } from "./icons";
-import { Badge } from "./ui/badge";
 import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
-import { Weather } from "./weather";
 import { TypewriterText } from "./typewriter-text";
+import { Badge } from "./ui/badge";
+import { Weather } from "./weather";
 
 const PurePreviewMessage = ({
   chatId,
@@ -148,7 +148,9 @@ const PurePreviewMessage = ({
                           isStreaming={isLoading}
                           text={sanitizedText}
                         >
-                          {(animatedText) => <Response>{animatedText}</Response>}
+                          {(animatedText) => (
+                            <Response>{animatedText}</Response>
+                          )}
                         </TypewriterText>
                       ) : (
                         <Response>{sanitizedText}</Response>
@@ -333,7 +335,7 @@ const ThinkingDot = ({ delay }: { delay: number }) => (
     className="size-2.5 rounded-full bg-primary"
     transition={{
       duration: 1.2,
-      repeat: Infinity,
+      repeat: Number.POSITIVE_INFINITY,
       ease: "easeInOut",
       delay,
     }}
@@ -365,19 +367,19 @@ export const ThinkingMessage = ({
         </div>
 
         <div className="flex w-full flex-col gap-2 md:gap-3">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-foreground text-sm">
             <span className="font-medium">{label}</span>
             {isReasoningModel && (
               <Badge
-                variant="outline"
                 className="border-primary/40 bg-primary/10 text-primary"
+                variant="outline"
               >
                 推理增强
               </Badge>
             )}
           </div>
 
-          <div className="flex flex-col gap-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+          <div className="flex flex-col gap-2 rounded-xl border border-primary/30 border-dashed bg-primary/5 p-3 text-muted-foreground text-xs">
             <p>{description}</p>
             <div className="flex items-center gap-2 text-primary">
               <ThinkingDot delay={0} />
@@ -390,4 +392,3 @@ export const ThinkingMessage = ({
     </motion.div>
   );
 };
-
