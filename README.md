@@ -50,6 +50,16 @@ NEXT_PUBLIC_OPENAI_REASONING_MODEL_DISPLAY_NAME=推理模型显示名称
 
 > 提示：`OPENAI_API_URL` 会自动补齐 `/v1`，填写时可带或不带，全局都会指向 `/v1/chat/completions`。
 
+## 生产部署（Tencent CVM）
+
+生产环境需要完整的变量清单以供 Docker/CI/SSH 等环节共用。仓库提供了 `deploy/.env.tencent.production.example` 模版，覆盖 Postgres、NextAuth、OpenAI/Anthropic、AI Gateway、Redis、Blob、CCR 仓库、Docker Hub 镜像以及 SSH/CI 所需的全部键值。部署前可按照以下步骤操作：
+
+1. 复制模板：`cp deploy/.env.tencent.production.example .env.production`
+2. 根据实际资源（数据库实例、AI 网关、CCR 命名空间、部署服务器等）补全变量
+3. 仅在 CI 或服务器内加载 `.env.production`，并确保文件未被提交到版本库
+
+该模板同时列出了 Docker Compose、系统服务及 GitHub/GitLab CI 流程引用的全部变量，便于团队在 Tencent CVM 上自定义生产配置。
+
 ## 常用命令
 
 | 命令 | 说明 |
