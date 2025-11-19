@@ -30,7 +30,10 @@ export async function middleware(request: NextRequest) {
 
     const redirectUrl = new URL("/login", request.url);
     // 使用 pathname + search 而不是完整的 request.url
-    redirectUrl.searchParams.set("redirectUrl", pathname + request.nextUrl.search);
+    redirectUrl.searchParams.set(
+      "redirectUrl",
+      pathname + request.nextUrl.search
+    );
     return NextResponse.redirect(redirectUrl);
   }
 

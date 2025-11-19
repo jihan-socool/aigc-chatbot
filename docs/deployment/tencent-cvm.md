@@ -147,8 +147,10 @@ nano /app/.env.production
 AUTH_SECRET=your-random-secret-key-32-characters-or-more
 NEXTAUTH_SECRET=your-random-secret-key-32-characters-or-more
 
-# Application URL
-NEXTAUTH_URL=https://your-domain.com
+# Application URL - IMPORTANT: Must match exactly how you access the app
+# For IP-based deployment: NEXTAUTH_URL=http://122.51.119.81:3000
+# For domain-based deployment: NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_URL=http://122.51.119.81:3000
 
 # AI Gateway and Models
 OPENAI_API_KEY=your-openai-api-key
@@ -483,7 +485,37 @@ sudo kill -9 <PID>
 # Change "3000:3000" to "3001:3000"
 ```
 
-#### 5. Out of Disk Space
+#### 5. NextAuth UntrustedHost Error
+
+**Symptoms**: Authentication fails with error "UntrustedHost: Host must be trusted. URL was: http://122.51.119.81:3000/api/auth/session"
+
+**Solutions**:
+```bash
+# 1. Verify NEXTAUTH_URL matches exactly how you access the app
+# Check your environment file
+grep NEXTAUTH_URL /app/.env.production
+
+# 2. Ensure the URL includes protocol, IP/domain, and port
+# Correct examples:
+# - http://122.51.119.81:3000 (IP-based deployment)
+# - https://your-domain.com (domain-based deployment)
+
+# 3. Restart the application after updating environment variables
+docker compose restart
+# or
+docker restart ai-chatbot
+
+# 4. Check application logs for NextAuth configuration
+docker logs ai-chatbot | grep -i auth
+```
+
+**Important Notes**:
+- The `NEXTAUTH_URL` must exactly match the URL you use to access the application
+- For IP-based deployments, use `http://ip-address:port` (not https)
+- The project already includes `trustHost: true` configuration for IP-based deployments
+- Both `AUTH_SECRET` and `NEXTAUTH_SECRET` must be set with the same value
+
+#### 6. Out of Disk Space
 
 **Symptoms**: Docker fails with "no space left on device"
 

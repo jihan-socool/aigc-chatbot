@@ -70,9 +70,7 @@ export async function createUser(username: string) {
   }
 }
 
-export async function ensureUserByUsername(
-  rawUsername: string
-): Promise<User> {
+export async function ensureUserByUsername(rawUsername: string): Promise<User> {
   const username = sanitizeUsername(rawUsername);
 
   if (!username) {
@@ -158,7 +156,7 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
       return { deletedCount: 0 };
     }
 
-    const chatIds = userChats.map(c => c.id);
+    const chatIds = userChats.map((c) => c.id);
 
     await db.delete(vote).where(inArray(vote.chatId, chatIds));
     await db.delete(message).where(inArray(message.chatId, chatIds));
@@ -178,11 +176,7 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
   }
 }
 
-export async function deleteUserByUsername({
-  username,
-}: {
-  username: string;
-}) {
+export async function deleteUserByUsername({ username }: { username: string }) {
   const sanitized = sanitizeUsername(username);
 
   const existingUser = await getUserByUsername(sanitized);
@@ -191,7 +185,9 @@ export async function deleteUserByUsername({
     return { deletedUser: false, deletedChats: 0 };
   }
 
-  const { deletedCount } = await deleteAllChatsByUserId({ userId: existingUser.id });
+  const { deletedCount } = await deleteAllChatsByUserId({
+    userId: existingUser.id,
+  });
 
   try {
     await db.delete(user).where(eq(user.id, existingUser.id));

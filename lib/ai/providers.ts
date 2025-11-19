@@ -1,15 +1,17 @@
+import { createOpenAI } from "@ai-sdk/openai";
 import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
 } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import { isTestEnvironment } from "../constants";
 
 // 处理 baseURL：确保格式正确
 const getBaseURL = () => {
   const url = process.env.OPENAI_API_URL;
-  if (!url) return undefined;
+  if (!url) {
+    return;
+  }
 
   // 规范化：去除多余的结尾斜杠
   const baseURL = url.replace(/\/+$/, "");

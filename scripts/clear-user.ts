@@ -13,12 +13,12 @@ async function main() {
   try {
     const result = await deleteUserByUsername({ username });
 
-    if (!result.deletedUser) {
-      console.warn(`No user found with username "${username}".`);
-    } else {
+    if (result.deletedUser) {
       console.log(
         `Deleted user "${username}" and ${result.deletedChats} chat(s).`
       );
+    } else {
+      console.warn(`No user found with username "${username}".`);
     }
 
     process.exit(0);

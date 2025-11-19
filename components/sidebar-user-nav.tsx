@@ -97,7 +97,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                   await signOut({
                     redirect: false,
                   });
-                  
+
                   // 使用客户端路由跳转，保持相对路径
                   router.push("/login");
                 }}

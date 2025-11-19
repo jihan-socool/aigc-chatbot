@@ -42,9 +42,7 @@ export function ChatStatusIndicator({
         : "模型正在思考如何回应";
     }
     if (status === "streaming") {
-      return isReasoningModel
-        ? "推理完成，正在整理回答"
-        : "模型正在生成回复";
+      return isReasoningModel ? "推理完成，正在整理回答" : "模型正在生成回复";
     }
     return "";
   })();
@@ -56,24 +54,24 @@ export function ChatStatusIndicator({
       {shouldShow && (
         <motion.div
           animate={{ opacity: 1, y: 0 }}
-          className="border-b border-border/70 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+          className="border-border/70 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
           exit={{ opacity: 0, y: -8 }}
           initial={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.18, ease: "easeInOut" }}
         >
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 py-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <div className="flex items-center gap-2 font-medium text-foreground text-sm">
               <span>{title}</span>
               {isReasoningModel && (
                 <Badge
-                  variant="outline"
                   className="border-primary/40 bg-primary/10 text-primary"
+                  variant="outline"
                 >
                   深度推理
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{indicatorText}</p>
+            <p className="text-muted-foreground text-xs">{indicatorText}</p>
             <Progress
               aria-label="chat status"
               className="h-[3px] overflow-hidden bg-muted"
@@ -85,4 +83,3 @@ export function ChatStatusIndicator({
     </AnimatePresence>
   );
 }
-
