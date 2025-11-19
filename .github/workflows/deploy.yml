@@ -1,4 +1,4 @@
-name: Build and Deploy to Tencent CCR
+name: Deploy to Tencent CVM
 
 on:
   push:
@@ -7,68 +7,19 @@ on:
   workflow_dispatch:
 
 # Required GitHub Secrets:
-# - CCR_REGISTRY: Tencent CCR registry host (e.g., ccr.ccs.tencentyun.com)
-# - CCR_NAMESPACE: CCR namespace (project name)
-# - CCR_REPOSITORY: CCR repository name
-# - CCR_USERNAME: CCR username for authentication
-# - CCR_PASSWORD: CCR password/access token for authentication
 # - DEPLOY_SSH_HOST: Tencent CVM host IP or domain
 # - DEPLOY_SSH_USER: SSH username for the CVM
 # - DEPLOY_SSH_PORT: SSH port (default: 22)
 # - DEPLOY_SSH_KEY: Private SSH key for authentication
-# - DOCKER_HUB_MIRROR: Docker Hub mirror URL (optional, for faster builds in CN)
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9.12.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-options: |
-            ${{ secrets.DOCKER_HUB_MIRROR && format('image={0}', secrets.DOCKER_HUB_MIRROR) || '' }}
-
-      - name: Log in to Tencent CCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.CCR_REGISTRY }}
-          username: ${{ secrets.CCR_USERNAME }}
-          password: ${{ secrets.CCR_PASSWORD }}
-
-      - name: Get commit SHA
-        id: sha
-        run: echo "short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Build and push to Tencent CCR
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.CCR_REGISTRY }}/${{ secrets.CCR_NAMESPACE }}/${{ secrets.CCR_REPOSITORY }}:${{ steps.sha.outputs.short }}
-            ${{ secrets.CCR_REGISTRY }}/${{ secrets.CCR_NAMESPACE }}/${{ secrets.CCR_REPOSITORY }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: Deploy to Tencent CVM
-        if: success()
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DEPLOY_SSH_HOST }}
@@ -77,6 +28,4 @@ jobs:
           port: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
           script: |
             cd /app && \
-            docker login -u ${{ secrets.CCR_USERNAME }} -p ${{ secrets.CCR_PASSWORD }} ${{ secrets.CCR_REGISTRY }} && \
-            docker compose pull && \
-            docker compose up -d --remove-orphans
+            bash deploy/tencent-cvm-deploy.sh

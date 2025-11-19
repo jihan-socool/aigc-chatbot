@@ -1,17 +1,16 @@
 # Tencent CVM Deployment Guide
 
-This guide provides comprehensive instructions for deploying the AIGC Chatbot application on Tencent Cloud Virtual Machine (CVM) using Docker and Docker Compose with systemd for service management.
+This guide provides comprehensive instructions for deploying the AIGC Chatbot application on Tencent Cloud Virtual Machine (CVM) using Docker and Docker Compose with local builds.
 
 ## Table of Contents
 
 1. [Server Prerequisites](#server-prerequisites)
 2. [Environment Setup](#environment-setup)
-3. [Deployment Assets Installation](#deployment-assets-installation)
+3. [Initial Deployment](#initial-deployment)
 4. [Service Configuration](#service-configuration)
-5. [Enabling the Service](#enabling-the-service)
-6. [Monitoring and Health Checks](#monitoring-and-health-checks)
-7. [Troubleshooting](#troubleshooting)
-8. [CI/CD Pipeline Integration](#cicd-pipeline-integration)
+5. [Monitoring and Health Checks](#monitoring-and-health-checks)
+6. [Troubleshooting](#troubleshooting)
+7. [CI/CD Pipeline Integration](#cicd-pipeline-integration)
 
 ## Server Prerequisites
 
@@ -21,7 +20,7 @@ This guide provides comprehensive instructions for deploying the AIGC Chatbot ap
 - **CPU**: Minimum 2 cores
 - **RAM**: Minimum 4GB (8GB+ recommended)
 - **Storage**: Minimum 20GB free space (50GB+ recommended for image storage)
-- **Network**: Stable internet connection for pulling images
+- **Network**: Stable internet connection for pulling code
 
 ### 1. Install Docker
 
@@ -81,67 +80,20 @@ sudo pip3 install docker-compose
 docker-compose --version
 ```
 
-### 3. Configure Tencent Container Registry Access
+### 3. Install Git
 
-Set up access to Tencent Container Registry (CCR):
-
-```bash
-# Create Docker login credentials for Tencent CCR
-# Replace with your actual credentials from Tencent Cloud console
-sudo mkdir -p ~/.docker
-
-# Generate credentials file (you can also login interactively)
-cat <<EOF > ~/.docker/config.json
-{
-  "auths": {
-    "ccr.ccs.tencentyun.com": {
-      "auth": "$(echo -n 'YOUR_USERNAME:YOUR_PASSWORD' | base64)"
-    }
-  }
-}
-EOF
-
-# Or login interactively:
-docker login -u YOUR_USERNAME ccr.ccs.tencentyun.com
-# Enter password when prompted
-
-# Verify login
-docker pull ccr.ccs.tencentyun.com/YOUR_NAMESPACE/aigc-chatbot:latest
-```
-
-**Note**: To obtain your Tencent CCR credentials:
-1. Visit [Tencent Cloud Console](https://console.cloud.tencent.com/)
-2. Navigate to Container Registry (容器镜像服务)
-3. Go to "Personal Namespace" or your organization namespace
-4. Click "Access Credentials" to view username and password
-
-### 4. Configure Registry Mirror (Optional but Recommended)
-
-Speed up image pulling by configuring mirror sources:
+Install Git for pulling code updates:
 
 ```bash
-# Create or edit Docker daemon configuration
-sudo mkdir -p /etc/docker
-cat <<EOF | sudo tee /etc/docker/daemon.json
-{
-  "registry-mirrors": [
-    "https://mirror.ccs.tencentyun.com",
-    "https://dqd6soan.mirror.aliyuncs.com"
-  ],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  }
-}
-EOF
+# Install git
+sudo apt-get update
+sudo apt-get install -y git
 
-# Reload Docker daemon
-sudo systemctl daemon-reload
-sudo systemctl restart docker
+# Verify installation
+git --version
 ```
 
-### 5. Grant User Docker Permissions (Optional)
+### 4. Grant User Docker Permissions (Optional)
 
 Allow running Docker commands without sudo:
 
@@ -161,25 +113,31 @@ docker ps
 
 ## Environment Setup
 
-### 1. Create Application Directory
+### 1. Clone Repository
 
 ```bash
 # Create deployment directory
-sudo mkdir -p /opt/aigc-chatbot
-sudo chown $USER:$USER /opt/aigc-chatbot
-cd /opt/aigc-chatbot
+sudo mkdir -p /app
+sudo chown $USER:$USER /app
+
+# Clone the repository
+cd /app
+git clone <your-repo-url> .
+
+# Alternatively, if using a specific branch:
+# git clone -b main <your-repo-url> .
 ```
 
 ### 2. Prepare Environment Files
 
-Create the production environment file at `/opt/aigc-chatbot/.env.production`:
+Create the production environment file at `/app/.env.production`:
 
 ```bash
 # Copy from the project's .env.example
 cp .env.example .env.production
 
 # Edit the environment file with production values
-nano /opt/aigc-chatbot/.env.production
+nano /app/.env.production
 ```
 
 **Minimum required variables for Tencent CVM deployment**:
@@ -187,23 +145,27 @@ nano /opt/aigc-chatbot/.env.production
 ```bash
 # Authentication
 AUTH_SECRET=your-random-secret-key-32-characters-or-more
+NEXTAUTH_SECRET=your-random-secret-key-32-characters-or-more
+
+# Application URL
+NEXTAUTH_URL=https://your-domain.com
 
 # AI Gateway and Models
-AI_GATEWAY_API_KEY=your-ai-gateway-key
-OPENAI_API_URL=https://your-gateway-domain/v1
-OPENAI_CHAT_MODEL=qwen-max
-OPENAI_REASONING_MODEL=qwen-max
-OPENAI_TITLE_MODEL=qwen-max
-OPENAI_ARTIFACT_MODEL=qwen-max
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_API_URL=https://api.openai.com/v1
+OPENAI_CHAT_MODEL=gpt-4o
+OPENAI_REASONING_MODEL=gpt-4o-mini
+OPENAI_TITLE_MODEL=gpt-4o-mini
+OPENAI_ARTIFACT_MODEL=gpt-4o
 
 # Display names
-NEXT_PUBLIC_OPENAI_CHAT_MODEL_DISPLAY_NAME=QWen Max
-NEXT_PUBLIC_OPENAI_REASONING_MODEL_DISPLAY_NAME=QWen Max
+NEXT_PUBLIC_OPENAI_CHAT_MODEL_DISPLAY_NAME=GPT-4o
+NEXT_PUBLIC_OPENAI_REASONING_MODEL_DISPLAY_NAME=GPT-4o Mini
 
 # Database (PostgreSQL)
 POSTGRES_URL=postgresql://user:password@postgres-host:5432/aigc_chatbot
 
-# Blob Storage (Vercel Blob or compatible S3)
+# Blob Storage (Vercel Blob or compatible S3) - optional
 BLOB_READ_WRITE_TOKEN=your-blob-token
 
 # Redis (for resumable streaming, optional)
@@ -211,119 +173,94 @@ REDIS_URL=redis://redis-host:6379/0
 
 # Application Settings
 NODE_ENV=production
+PORT=3000
 ```
 
-### 3. Optional: Create Local Override File
-
-For sensitive credentials or local-only settings:
+### 3. Set File Permissions
 
 ```bash
-# Create optional local override file
-touch /opt/aigc-chatbot/.env.production.local
-
-# Add environment-specific overrides
-echo "REGISTRY_PASSWORD=your-tencent-ccr-password" >> /opt/aigc-chatbot/.env.production.local
-
-# Restrict permissions
-chmod 600 /opt/aigc-chatbot/.env.production.local
+# Restrict permissions on environment file
+chmod 600 /app/.env.production
 ```
 
-### 4. Create Docker Compose Configuration
+### 4. Verify Docker Compose Configuration
 
-Create `/opt/aigc-chatbot/docker-compose.yml`:
+The repository includes a `docker-compose.yml` file that builds the image locally:
 
 ```yaml
-version: "3.9"
+version: "3.8"
 
 services:
-  aigc-chatbot:
-    image: ccr.ccs.tencentyun.com/YOUR_NAMESPACE/aigc-chatbot:latest
-    container_name: aigc-chatbot
-    restart: on-failure
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-chatbot
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
+      NODE_ENV: production
     env_file:
       - .env.production
-    volumes:
-      - aigc-data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
       interval: 30s
-      timeout: 10s
+      timeout: 3s
       retries: 3
       start_period: 40s
     networks:
-      - aigc-network
+      - app-network
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-
-  # Optional: PostgreSQL for local database
-  postgres:
-    image: postgres:15-alpine
-    container_name: aigc-postgres
-    restart: on-failure
-    environment:
-      POSTGRES_DB: aigc_chatbot
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - aigc-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # Optional: Redis for resumable streaming
-  redis:
-    image: redis:7-alpine
-    container_name: aigc-redis
-    restart: on-failure
-    command: redis-server --appendonly yes
-    volumes:
-      - redis-data:/data
-    networks:
-      - aigc-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-volumes:
-  aigc-data:
-  postgres-data:
-  redis-data:
 
 networks:
-  aigc-network:
+  app-network:
     driver: bridge
 ```
 
-## Deployment Assets Installation
+This configuration uses local builds instead of pulling from a container registry.
 
-### 1. Copy Deployment Script
+## Initial Deployment
+
+### 1. Build and Start Services
 
 ```bash
-# Copy the deployment script to the application directory
-cp deploy/tencent-cvm-deploy.sh /opt/aigc-chatbot/deploy/
+# Navigate to the application directory
+cd /app
 
-# Make it executable
-chmod +x /opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh
+# Build the Docker image
+docker compose build
 
-# Verify script syntax with shellcheck (install if needed: apt-get install -y shellcheck)
-shellcheck /opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh
+# Start the services
+docker compose up -d
+
+# Verify containers are running
+docker ps
+
+# Check logs
+docker compose logs -f
 ```
 
-### 2. Copy Systemd Service Unit
+### 2. Verify Deployment
+
+```bash
+# Check if container is running
+docker ps | grep ai-chatbot
+
+# Test the application endpoint
+curl -s http://localhost:3000 | head -20
+
+# View recent container logs
+docker logs -f ai-chatbot --tail=50
+```
+
+### 3. Optional: Setup Systemd Service
+
+If you want to manage the application as a systemd service:
 
 ```bash
 # Copy the systemd service template
@@ -334,6 +271,13 @@ sudo chmod 644 /etc/systemd/system/aigc-chatbot.service
 
 # Reload systemd daemon to recognize the new service
 sudo systemctl daemon-reload
+
+# Enable and start the service
+sudo systemctl enable aigc-chatbot.service
+sudo systemctl start aigc-chatbot.service
+
+# Check service status
+sudo systemctl status aigc-chatbot.service
 ```
 
 ## Service Configuration
@@ -352,56 +296,17 @@ systemd-analyze verify /etc/systemd/system/aigc-chatbot.service
 
 ### 2. Configure Service Variables
 
-The systemd service reads two environment files in order:
-1. `/opt/aigc-chatbot/.env.production` (main configuration)
-2. `/opt/aigc-chatbot/.env.production.local` (local overrides, optional)
+The systemd service reads environment files:
+- `/app/.env.production` (main configuration)
 
 Ensure these files exist with proper permissions:
 
 ```bash
 # Verify environment files
-ls -la /opt/aigc-chatbot/.env.production*
+ls -la /app/.env.production
 
 # Set restrictive permissions
-chmod 640 /opt/aigc-chatbot/.env.production
-chmod 600 /opt/aigc-chatbot/.env.production.local 2>/dev/null || true
-```
-
-## Enabling the Service
-
-### 1. Enable Automatic Startup
-
-```bash
-# Enable the service to start automatically on boot
-sudo systemctl enable aigc-chatbot.service
-
-# Verify it's enabled
-sudo systemctl is-enabled aigc-chatbot.service
-```
-
-### 2. Start the Service
-
-```bash
-# Start the service immediately
-sudo systemctl start aigc-chatbot.service
-
-# Check service status
-sudo systemctl status aigc-chatbot.service
-
-# If there are issues, see Troubleshooting section
-```
-
-### 3. Verify Deployment
-
-```bash
-# Check if container is running
-docker ps | grep aigc-chatbot
-
-# Test the application endpoint
-curl -s http://localhost:3000 | head -20
-
-# View recent container logs
-docker logs -f aigc-chatbot --tail=50
+chmod 600 /app/.env.production
 ```
 
 ## Monitoring and Health Checks
@@ -426,19 +331,19 @@ sudo journalctl -u aigc-chatbot.service --since "2 hours ago"
 
 ```bash
 # Check container health status
-docker inspect aigc-chatbot --format='{{.State.Health.Status}}'
+docker inspect ai-chatbot --format='{{.State.Health.Status}}'
 
 # View full container inspection
-docker inspect aigc-chatbot
+docker inspect ai-chatbot
 
 # Check container logs
-docker logs aigc-chatbot
+docker logs ai-chatbot
 
 # Stream container logs in real-time
-docker logs -f aigc-chatbot --tail=100
+docker logs -f ai-chatbot --tail=100
 
 # View container resource usage
-docker stats aigc-chatbot
+docker stats ai-chatbot
 ```
 
 ### 3. Application Monitoring
@@ -478,13 +383,13 @@ Set up centralized logging for better monitoring:
 
 ```bash
 # Check Docker log driver configuration
-docker inspect aigc-chatbot | grep -A 20 LogConfig
+docker inspect ai-chatbot | grep -A 20 LogConfig
 
 # View logs from all containers
-docker-compose logs -f
+docker compose logs -f
 
 # Export logs for analysis
-docker logs aigc-chatbot > /tmp/aigc-chatbot.log 2>&1
+docker logs ai-chatbot > /tmp/ai-chatbot.log 2>&1
 ```
 
 ## Troubleshooting
@@ -501,10 +406,10 @@ docker logs aigc-chatbot > /tmp/aigc-chatbot.log 2>&1
 sudo journalctl -u aigc-chatbot.service -n 50 -p err
 
 # Verify environment files exist and are readable
-ls -la /opt/aigc-chatbot/.env.production*
+ls -la /app/.env.production
 
 # Test the deploy script manually
-cd /opt/aigc-chatbot
+cd /app
 bash -x deploy/tencent-cvm-deploy.sh
 
 # Check Docker daemon is running
@@ -514,30 +419,53 @@ sudo systemctl status docker
 sudo systemctl restart docker
 ```
 
-#### 2. Image Pull Fails
+#### 2. Docker Build Fails
 
-**Symptoms**: Deployment script fails at image pull step
+**Symptoms**: Deployment script fails at docker build step
 
 **Solutions**:
 ```bash
-# Verify registry login
-docker login ccr.ccs.tencentyun.com
+# Check build logs
+docker compose build --no-cache
 
-# Check Docker credentials
-cat ~/.docker/config.json | jq .
+# Verify Dockerfile exists
+ls -la Dockerfile
 
-# Test image pull manually
-docker pull ccr.ccs.tencentyun.com/YOUR_NAMESPACE/aigc-chatbot:latest
+# Check disk space
+df -h
 
-# Check network connectivity
-ping -c 3 ccr.ccs.tencentyun.com
-nslookup ccr.ccs.tencentyun.com
+# Clean up Docker build cache
+docker builder prune -a -f
 
-# Verify image exists in registry
-# Check from Tencent Cloud console or use curl to query API
+# Try building manually
+docker build -t ai-chatbot .
 ```
 
-#### 3. Port Already in Use
+#### 3. Git Pull Fails
+
+**Symptoms**: Deployment script fails at git pull step
+
+**Solutions**:
+```bash
+# Check git status
+cd /app
+git status
+
+# Verify remote is configured
+git remote -v
+
+# Test connectivity to git server
+ping -c 3 github.com  # or your git host
+
+# Reset to clean state
+git fetch origin
+git reset --hard origin/main
+
+# Check git permissions
+ls -la .git
+```
+
+#### 4. Port Already in Use
 
 **Symptoms**: Docker container fails to start with port binding error
 
@@ -555,7 +483,7 @@ sudo kill -9 <PID>
 # Change "3000:3000" to "3001:3000"
 ```
 
-#### 4. Out of Disk Space
+#### 5. Out of Disk Space
 
 **Symptoms**: Docker fails with "no space left on device"
 
@@ -580,54 +508,54 @@ docker images --format "table {{.Repository}}\t{{.Size}}"
 du -sh /var/lib/docker/containers/*
 ```
 
-#### 5. Container Exits Immediately
+#### 6. Container Exits Immediately
 
 **Symptoms**: Container starts then stops within seconds
 
 **Solutions**:
 ```bash
 # Check container logs
-docker logs aigc-chatbot
+docker logs ai-chatbot
 
 # Check for missing environment variables
-docker-compose config
+docker compose config
 
 # Verify environment file syntax
-cat /opt/aigc-chatbot/.env.production | grep -v '^#' | grep -v '^$'
+cat /app/.env.production | grep -v '^#' | grep -v '^$'
 
 # Run container in interactive mode for debugging
-docker-compose run --rm aigc-chatbot sh
+docker compose run --rm app sh
 ```
 
-#### 6. Health Check Failing
+#### 7. Health Check Failing
 
 **Symptoms**: Container marked as unhealthy despite running
 
 **Solutions**:
 ```bash
 # Check health status
-docker inspect aigc-chatbot --format='{{.State.Health}}'
+docker inspect ai-chatbot --format='{{.State.Health}}'
 
 # Manually test the health endpoint
-docker exec aigc-chatbot curl -i http://localhost:3000/api/health
+docker exec ai-chatbot node -e "require('http').get('http://localhost:3000/api/health', (r) => console.log(r.statusCode))"
 
 # Check container network
-docker inspect aigc-chatbot --format='{{.NetworkSettings.Networks}}'
+docker inspect ai-chatbot --format='{{.NetworkSettings.Networks}}'
 
 # Increase health check timeout in docker-compose.yml if needed
 ```
 
-#### 7. Permission Denied Errors
+#### 8. Permission Denied Errors
 
 **Symptoms**: Script execution fails with permission denied
 
 **Solutions**:
 ```bash
 # Verify script is executable
-ls -la /opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh
+ls -la /app/deploy/tencent-cvm-deploy.sh
 
 # Make script executable
-chmod +x /opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh
+chmod +x /app/deploy/tencent-cvm-deploy.sh
 
 # Verify user has docker access
 groups $USER | grep docker
@@ -643,25 +571,26 @@ For detailed troubleshooting, run the deployment script in debug mode:
 
 ```bash
 # Run script with set -x for command execution tracing
-bash -x /opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh
+bash -x /app/deploy/tencent-cvm-deploy.sh
 
 # Increase logging level
 export LOG_FILE=/tmp/deploy-debug.log
-bash -x /opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh
+bash -x /app/deploy/tencent-cvm-deploy.sh
 
 # Capture all output
-bash -x /opt/aigc-chatbot/deploy/tencent-cvm-deploy.sh 2>&1 | tee /tmp/deploy.log
+bash -x /app/deploy/tencent-cvm-deploy.sh 2>&1 | tee /tmp/deploy.log
 ```
 
 ## CI/CD Pipeline Integration
 
 ### CI Pipeline Expectations
 
-The CI/CD pipeline expects the following:
+The CI/CD pipeline uses a simplified local build approach:
 
 #### File Paths
 - Deployment script: `deploy/tencent-cvm-deploy.sh`
-- Systemd unit: `deploy/aigc-chatbot.service`
+- Docker Compose: `docker-compose.yml`
+- Dockerfile: `Dockerfile`
 - Documentation: `docs/deployment/tencent-cvm.md`
 
 #### Script Requirements
@@ -673,17 +602,14 @@ The CI/CD pipeline expects the following:
 - Must log all operations for audit trail
 
 #### Environment Variables
-The CI pipeline sets these environment variables for deployment:
+The deployment script uses these environment variables:
 
 ```bash
-REGISTRY_URL=ccr.ccs.tencentyun.com
-NAMESPACE=your-namespace
-IMAGE_NAME=aigc-chatbot
-IMAGE_TAG=<git-commit-sha or latest>
-REGISTRY_USERNAME=<from CI secrets>
-REGISTRY_PASSWORD=<from CI secrets>
-COMPOSE_DIR=/opt/aigc-chatbot
-ENV_FILE=/opt/aigc-chatbot/.env.production
+COMPOSE_DIR=/app
+ENV_FILE=/app/.env.production
+GIT_BRANCH=main
+HEALTH_CHECK_TIMEOUT=60
+HEALTH_CHECK_INTERVAL=5
 ```
 
 #### Expected Script Exit Codes
@@ -696,42 +622,46 @@ All operations are logged to:
 - Stdout for CI console output
 - `/var/log/aigc-chatbot-deploy.log` on the server
 
-### Manual Deployment via CI
+### Deployment Process
 
-If setting up CI/CD, the pipeline typically:
+The CI/CD pipeline follows these steps:
 
-1. Builds Docker image locally
-2. Tags with commit SHA or "latest"
-3. Pushes to Tencent CCR
-4. SSHes into CVM server
-5. Runs deployment script:
-   ```bash
-   ssh -i /path/to/key ubuntu@server-ip \
-     "cd /opt/aigc-chatbot && \
-      export IMAGE_TAG=v1.2.3 && \
-      bash deploy/tencent-cvm-deploy.sh"
-   ```
+1. SSHes into CVM server
+2. Runs deployment script which:
+   - Pulls latest code from git
+   - Builds Docker image locally
+   - Restarts services with docker compose
+   - Verifies container health
+   - Prunes old images
+
+```bash
+ssh -i /path/to/key ubuntu@server-ip \
+  "cd /app && \
+   bash deploy/tencent-cvm-deploy.sh"
+```
 
 ### Rollback Procedure
 
 To rollback to a previous version:
 
 ```bash
-# Stop current deployment
-sudo systemctl stop aigc-chatbot.service
+# Navigate to application directory
+cd /app
 
-# List available images
-docker image ls | grep aigc-chatbot
+# Checkout previous version
+git log --oneline -n 10  # View recent commits
+git checkout <commit-hash>
 
-# Pull specific version
-docker pull ccr.ccs.tencentyun.com/YOUR_NAMESPACE/aigc-chatbot:v1.2.2
-
-# Update docker-compose image tag and restart
-export IMAGE_TAG=v1.2.2
-sudo systemctl start aigc-chatbot.service
+# Rebuild and restart
+docker compose build
+docker compose up -d
 
 # Verify rollback
-docker ps | grep aigc-chatbot
+docker ps
+docker compose logs -f
+
+# To return to latest:
+git checkout main
 ```
 
 ## Additional Resources
@@ -739,7 +669,7 @@ docker ps | grep aigc-chatbot
 - [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Systemd Documentation](https://www.freedesktop.org/software/systemd/man/)
-- [Tencent CCR Documentation](https://cloud.tencent.com/document/product/1141)
+- [Git Documentation](https://git-scm.com/doc)
 - [Application README](../../README.md)
 
 ## Support and Questions
@@ -748,7 +678,7 @@ For issues or questions:
 
 1. Check the [Troubleshooting](#troubleshooting) section above
 2. Review service logs: `sudo journalctl -u aigc-chatbot.service`
-3. Check container logs: `docker logs aigc-chatbot`
+3. Check container logs: `docker logs ai-chatbot`
 4. Review deployment script logs: `/var/log/aigc-chatbot-deploy.log`
 5. Contact the development team with:
    - Error messages and full logs
