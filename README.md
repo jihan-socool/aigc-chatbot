@@ -60,6 +60,36 @@ NEXT_PUBLIC_OPENAI_REASONING_MODEL_DISPLAY_NAME=推理模型显示名称
 
 该模板同时列出了 Docker Compose、系统服务及 GitHub/GitLab CI 流程引用的全部变量，便于团队在 Tencent CVM 上自定义生产配置。
 
+### 腾讯云容器镜像服务（CCR）配置
+
+项目已集成完整的 CI/CD 流水线，支持自动构建 Docker 镜像并部署到腾讯云 CVM。详细配置步骤：
+
+1. **完整配置指南**：参考 [`.github/CCR_SETUP_GUIDE.md`](.github/CCR_SETUP_GUIDE.md) 了解详细步骤
+2. **快速开始**：参考 [`.github/SETUP_INSTRUCTIONS.md`](.github/SETUP_INSTRUCTIONS.md) 
+3. **部署文档**：参考 [`.github/DEPLOYMENT.md`](.github/DEPLOYMENT.md)
+
+**快速设置 CVM**：
+
+```bash
+# SSH 登录到腾讯云 CVM
+ssh user@your-cvm-ip
+
+# 下载并运行一键配置脚本
+curl -O https://raw.githubusercontent.com/your-repo/main/scripts/setup-cvm.sh
+sudo bash setup-cvm.sh
+```
+
+**配置 GitHub Secrets**：
+
+在 GitHub 仓库的 Settings → Secrets and variables → Actions 中添加以下密钥：
+
+- `CCR_REGISTRY`, `CCR_NAMESPACE`, `CCR_REPOSITORY` - CCR 仓库信息
+- `CCR_USERNAME`, `CCR_PASSWORD` - 腾讯云访问凭证
+- `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_SSH_PORT`, `DEPLOY_SSH_KEY` - CVM SSH 配置
+- `DOCKER_HUB_MIRROR` - Docker Hub 镜像加速（可选）
+
+完成配置后，推送到 `main` 分支即可触发自动构建和部署。
+
 ## 常用命令
 
 | 命令 | 说明 |
