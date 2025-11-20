@@ -2,6 +2,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { ensureUserByUsername } from "@/lib/db/queries";
+import { AuthTimer } from "@/lib/perf/auth-timer";
 import { authConfig } from "./auth.config";
 
 export type UserType = "regular";
@@ -46,7 +47,10 @@ export const {
         username: { label: "Username", type: "text" },
       },
       async authorize(credentials) {
+        const timer = new AuthTimer();
         const rawUsername = credentials?.username;
+
+        timer.mark("validate");
 
         if (!rawUsername || typeof rawUsername !== "string") {
           console.error("[Auth] Invalid credentials: username is required");
@@ -54,7 +58,11 @@ export const {
         }
 
         try {
+          timer.mark("beforeUserLookup");
           const userRecord = await ensureUserByUsername(rawUsername);
+          timer.mark("afterUserLookup");
+
+          timer.logMetrics("Credentials");
 
           return {
             id: userRecord.id,
