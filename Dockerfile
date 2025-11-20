@@ -40,9 +40,17 @@ ENV PORT=3000
 RUN groupadd --system --gid 1001 nextjs \
   && useradd --system --uid 1001 --gid nextjs --home-dir /home/nextjs --create-home --shell /usr/sbin/nologin nextjs
 
+# Install postgresql-client for pg_isready
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
+COPY --from=deps /pnpm/store /pnpm/store
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/scripts ./scripts
 
 EXPOSE 3000
 
@@ -50,4 +58,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 CMD node 
 
 USER nextjs
 
+ENTRYPOINT ["/app/scripts/start.sh"]
 CMD ["node", "server.js"]
