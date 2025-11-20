@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: ai-chatbot-postgres
     restart: unless-stopped
     environment:
@@ -9,6 +9,7 @@ services:
       POSTGRES_PASSWORD: your_password
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -35,7 +36,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      POSTGRES_URL: postgresql://ai_user:your_password@postgres:5432/ai_chatbot
+      POSTGRES_URL: postgresql://ai_user:your_password@ai-chatbot-postgres:5432/ai_chatbot
     env_file:
       - .env.production
     depends_on:
