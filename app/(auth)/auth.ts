@@ -5,6 +5,22 @@ import { ensureUserByUsername } from "@/lib/db/queries";
 import { AuthTimer } from "@/lib/perf/auth-timer";
 import { authConfig } from "./auth.config";
 
+// Initialize database connection pool on first auth request
+// This ensures the database is ready without webpack bundling issues
+let dbInitialized = false;
+
+function ensureDbInitialized() {
+  if (!dbInitialized) {
+    // Import and initialize database only when needed
+    import("@/lib/db/server-init").then(({ initDatabaseOnServer }) => {
+      initDatabaseOnServer();
+      dbInitialized = true;
+    }).catch((error) => {
+      console.error("[Auth] Failed to initialize database:", error);
+    });
+  }
+}
+
 export type UserType = "regular";
 
 declare module "next-auth" {
@@ -51,6 +67,9 @@ export const {
         const rawUsername = credentials?.username;
 
         timer.mark("validate");
+
+        // Ensure database is initialized before any database operations
+        ensureDbInitialized();
 
         if (!rawUsername || typeof rawUsername !== "string") {
           console.error("[Auth] Invalid credentials: username is required");
