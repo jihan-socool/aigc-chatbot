@@ -32,23 +32,40 @@ import {
   vote,
 } from "./schema";
 import { sanitizeUsername } from "./utils";
+import { userCache } from "./auth-cache";
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
 
 // biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
+const client = postgres(process.env.POSTGRES_URL!, {
+  // Connection pool configuration for performance optimization
+  // max: Maximum number of connections to maintain in the pool
+  // Higher pool size allows handling concurrent requests without connection creation overhead
+  max: 20,
+});
 const db = drizzle(client);
 
 export async function getUserByUsername(
   username: string
 ): Promise<User | null> {
+  // Check cache first for performance
+  const cachedUser = userCache.get(username);
+  if (cachedUser) {
+    return cachedUser as User;
+  }
+
   try {
     const [existingUser] = await db
       .select()
       .from(user)
       .where(eq(user.username, username));
+
+    if (existingUser) {
+      // Cache the result for faster subsequent lookups
+      userCache.set(username, existingUser);
+    }
 
     return existingUser ?? null;
   } catch (_error) {
@@ -61,10 +78,17 @@ export async function getUserByUsername(
 
 export async function createUser(username: string) {
   try {
-    return await db
+    const result = await db
       .insert(user)
       .values({ username })
       .returning({ id: user.id, username: user.username });
+
+    // Cache the newly created user
+    if (result.length > 0) {
+      userCache.set(username, result[0]);
+    }
+
+    return result;
   } catch (_error) {
     throw new ChatSDKError("bad_request:database", "Failed to create user");
   }
