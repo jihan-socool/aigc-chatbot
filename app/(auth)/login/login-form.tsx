@@ -2,7 +2,6 @@
 
 import Form from "next/form";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 
 import { SubmitButton } from "@/components/submit-button";
@@ -15,7 +14,6 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirectUrl") ?? "/";
-  const { update: updateSession, status } = useSession();
 
   const [username, setUsername] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
@@ -26,12 +24,6 @@ export function LoginForm() {
       status: "idle",
     }
   );
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.replace(redirectUrl);
-    }
-  }, [status, redirectUrl, router]);
 
   useEffect(() => {
     if (state.status === "failed") {
@@ -46,11 +38,9 @@ export function LoginForm() {
       });
     } else if (state.status === "success") {
       setIsSuccessful(true);
-      updateSession();
       router.replace(redirectUrl);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status, redirectUrl, router.replace, updateSession]);
+  }, [state.status, redirectUrl, router]);
 
   const handleSubmit = (formData: FormData) => {
     setUsername((formData.get("username") as string) ?? "");

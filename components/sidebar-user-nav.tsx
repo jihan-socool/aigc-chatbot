@@ -23,10 +23,10 @@ import { toast } from "./toast";
 
 export function SidebarUserNav({ user }: { user: User }) {
   const router = useRouter();
-  const { data, status } = useSession();
+  const { status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
 
-  const displayName = data?.user?.username ?? user.name ?? "用户";
+  const displayName = user.name ?? "用户";
 
   return (
     <SidebarMenu>
