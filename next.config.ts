@@ -31,6 +31,20 @@ const nextConfig: NextConfig = {
         'postgres': false,
         'drizzle-orm/postgres-js': false,
       };
+      
+      // Mark Node.js built-in modules as external for client builds
+      config.externals = {
+        ...config.externals,
+        'net': 'commonjs net',
+        'tls': 'commonjs tls',
+        'crypto': 'commonjs crypto',
+        'stream': 'commonjs stream',
+        'perf_hooks': 'commonjs perf_hooks',
+        'fs': 'commonjs fs',
+        'path': 'commonjs path',
+        'os': 'commonjs os',
+        'util': 'commonjs util',
+      };
     }
     return config;
   },

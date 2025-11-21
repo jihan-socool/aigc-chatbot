@@ -3,18 +3,7 @@ import { registerOTel } from "@vercel/otel";
 export function register() {
   registerOTel({ serviceName: "ai-chatbot" });
 
-  // Warm up database connection pool on startup
-  // Only run on server side
-  if (typeof window === "undefined") {
-    // Use setTimeout to defer the import and avoid build-time analysis
-    setTimeout(async () => {
-      try {
-        // Dynamic import with Next.js path alias to avoid webpack bundling issues
-        const { initDatabaseOnServer } = await import("@/lib/db/server-init");
-        initDatabaseOnServer();
-      } catch (error) {
-        console.error("[Init] Failed to initialize database:", error);
-      }
-    }, 100);
-  }
+  // Database initialization is now handled in lib/db/server-init.ts
+  // which is imported only in server-side API routes and server components
+  // This prevents webpack from analyzing the postgres dependency chain
 }
