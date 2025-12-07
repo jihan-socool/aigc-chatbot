@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   experimental: {
     ppr: true,
   },
+  turbopack: {},
   // Prevent server-only packages from being bundled into client code
   serverExternalPackages: [
     'postgres',
